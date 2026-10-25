@@ -1,69 +1,152 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import MazeGrid from '@/components/MazeGrid';
+import ControlPanel from '@/components/ControlPanel';
+import SensorDashboard from '@/components/SensorDashboard';
+import CodeViewer from '@/components/CodeViewer';
+import PresentationPitch from '@/components/PresentationPitch';
+
+const INITIAL_GRID = Array(10).fill(null).map(() => Array(10).fill(0));
 
 export default function Home() {
+  const [grid, setGrid] = useState(INITIAL_GRID);
+  const [startPos, setStartPos] = useState([1, 1]);
+  const [goalPos, setGoalPos] = useState([8, 8]);
+  const [robotPos, setRobotPos] = useState([1, 1]);
+  const [algorithm, setAlgorithm] = useState('BFS');
+  const [activeTool, setActiveTool] = useState('wall');
+  const [visited, setVisited] = useState([]);
+  const [path, setPath] = useState([]);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const handleCellClick = (r, c) => {
+    if (isSimulating) return;
+    const newGrid = grid.map(row => [...row]);
+
+    if (activeTool === 'wall') {
+      if ((r !== startPos[0] || c !== startPos[1]) && (r !== goalPos[0] || c !== goalPos[1])) {
+        newGrid[r][c] = newGrid[r][c] === 1 ? 0 : 1;
+        setGrid(newGrid);
+      }
+    } else if (activeTool === 'start') {
+      setStartPos([r, c]);
+      setRobotPos([r, c]);
+      newGrid[r][c] = 0;
+      setGrid(newGrid);
+    } else if (activeTool === 'goal') {
+      setGoalPos([r, c]);
+      newGrid[r][c] = 0;
+      setGrid(newGrid);
+    }
+  };
+
+  const runAlgorithm = async () => {
+    setIsSimulating(true);
+    setVisited([]);
+    setPath([]);
+
+    // Simple BFS Traversal Simulation
+    const queue = [[...startPos, [startPos]]];
+    const visitedNodes = [];
+    const visitedSet = new Set();
+    visitedSet.add(`${startPos[0]}-${startPos[1]}`);
+
+    let finalPath = [];
+
+    while (queue.length > 0) {
+      const [r, c, currentPath] = queue.shift();
+      visitedNodes.push([r, c]);
+
+      if (r === goalPos[0] && c === goalPos[1]) {
+        finalPath = currentPath;
+        break;
+      }
+
+      const neighbors = [
+        [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
+      ];
+
+      for (const [nr, nc] of neighbors) {
+        if (
+          nr >= 0 && nr < 10 && nc >= 0 && nc < 10 &&
+          grid[nr][nc] === 0 &&
+          !visitedSet.has(`${nr}-${nc}`)
+        ) {
+          visitedSet.add(`${nr}-${nc}`);
+          queue.push([nr, nc, [...currentPath, [nr, nc]]]);
+        }
+      }
+    }
+
+    // Animate Visited Cells
+    for (let i = 0; i < visitedNodes.length; i++) {
+      setVisited(visitedNodes.slice(0, i + 1));
+      await new Promise(res => setTimeout(res, 30));
+    }
+
+    // Animate Final Path and Robot Move
+    for (let i = 0; i < finalPath.length; i++) {
+      setPath(finalPath.slice(0, i + 1));
+      setRobotPos(finalPath[i]);
+      await new Promise(res => setTimeout(res, 100));
+    }
+
+    setIsSimulating(false);
+  };
+
+  const handleReset = () => {
+    setGrid(INITIAL_GRID);
+    setStartPos([1, 1]);
+    setGoalPos([8, 8]);
+    setRobotPos([1, 1]);
+    setVisited([]);
+    setPath([]);
+    setIsSimulating(false);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
+    <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-4 gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400">
+            STREAM Muqablo Model 4: Pathfinding Robot
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xs text-slate-400 mt-1">
+            Modular Next.js Architecture • Breadth-First Search & Hardware Simulation
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <MazeGrid
+            grid={grid}
+            startPos={startPos}
+            goalPos={goalPos}
+            robotPos={robotPos}
+            path={path}
+            visited={visited}
+            activeTool={activeTool}
+            onCellClick={handleCellClick}
+          />
+          <CodeViewer />
         </div>
-      </main>
-    </div>
+
+        <div className="space-y-6">
+          <ControlPanel
+            algorithm={algorithm}
+            setAlgorithm={setAlgorithm}
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
+            isSimulating={isSimulating}
+            onRun={runAlgorithm}
+            onReset={handleReset}
+          />
+          <SensorDashboard isSimulating={isSimulating} />
+          <PresentationPitch />
+        </div>
+      </div>
+    </main>
   );
 }
